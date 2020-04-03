@@ -239,7 +239,7 @@ class Dataset(object):
 
         return dataset
 
-    def to_dataframe(self):
+    def to_dataframe(self, labels="label"):
         """Convert dataset to a pandas dataframe object.
 
         Returns
@@ -247,10 +247,34 @@ class Dataset(object):
         Dataframe
             Dataframe reprentation
         """
+        def conv_time(series):
+            """Convers timeseries in different formats to datetime format"""
+            try:
+                # Convert from format 2020 to datetime.datetime(2020, 12, 31)
+                return pd.to_datetime(series, format="%Y") + pd.tseries.offsets.MonthEnd(0) + pd.tseries.offsets.MonthEnd(11)
+            except:
+                pass
+            try:
+                # Convert from format 2020M01 to datetime.datetime(2020, 1, 31)
+                return pd.to_datetime(series, format="%YM%m") + pd.tseries.offsets.MonthEnd(0)
+            except:
+                pass
+
+        def conv_labels(dataset, df):
+            """Add labels columns for code/id in columns"""
+            d = {}
+            for dimension in dataset.dimensions:
+                if dimension.id in {"time"}:
+                    continue
+                d[dimension.id] = {}
+                for cat in dimension.categories:
+                    d[dimension.id][cat.id] = cat.label
+                df[f"{dimension.id}: label"] = df[dimension.id].map(d[dimension.id])
+
         dataframe = pd.DataFrame()
         dataframe['values'] = self._values
         for dimension in self.dimensions:
-            labels = list(map(lambda c: c.id, dimension.categories))
+            _labels = list(map(lambda c: c.id, dimension.categories))
             self.dimensions[(dimension.index + 1):]
             repeat_elements = dimension_list_size(
                 ItemList(self.dimensions[(dimension.index + 1):])
@@ -258,7 +282,25 @@ class Dataset(object):
             repeat_blocks = dimension_list_size(
                 ItemList(self.dimensions[:dimension.index]))
             labels_block = []
-            for l in labels:
+            for l in _labels:
                 labels_block += [l]*repeat_elements
             dataframe[dimension.id] = labels_block * repeat_blocks
+
+        if "time" in dataframe.columns.tolist():
+            dataframe["time: datetime"] = conv_time(dataframe["time"])
+
+        if labels is None:
+            pass
+        elif labels.lower() == "code":
+            pass
+        elif labels.lower() == "label":
+            conv_labels(self, dataframe)
+
+        dataframe.attrs = {
+            "source": self.json["source"],
+            "name": self.json["label"],
+            "url": self.json["href"],
+            "version": self.json["version"],
+            "updated": self.json["updated"],
+        }
         return dataframe
