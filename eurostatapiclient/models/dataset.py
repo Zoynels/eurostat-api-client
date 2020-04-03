@@ -192,6 +192,7 @@ class Dataset(object):
         Dataset
             Return dataset
         """
+
         extension = json.get('extension')
         if not (extension and isinstance(extension, dict)):
             raise ValueError("Json is not conformed. \
@@ -216,6 +217,7 @@ class Dataset(object):
             updated,
             label
         )
+        dataset.json = json
 
         ids = json.get('id')
         if not (ids and isinstance(ids, list)):
@@ -234,6 +236,7 @@ class Dataset(object):
             dataset.add_dimension(dimension)
         values = json.get('value')
         dataset.add_values(values)
+
         return dataset
 
     def to_dataframe(self):
