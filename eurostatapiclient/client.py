@@ -1,3 +1,4 @@
+import os
 import requests
 from .utils.property_decorators import property_is_string
 from .models.dataset import Dataset
@@ -33,6 +34,9 @@ class EurostatAPIClient(object):
         self.version = version
         self.response_type = response_type
         self.language = language
+        self.url = ""
+        self.params = []
+        self.Dataset = None
 
     def set_proxy(self, proxy_dict):
         """
@@ -75,14 +79,53 @@ class EurostatAPIClient(object):
                                         self.response_type,
                                         self.language)
 
-    def get_dataset(self, id, params={}, verify=True):
+    @property
+    def df(self):
+        if self.Dataset is None:
+            raise ValueError("Can't load DataFrame: Dataset is None!")
+        return self.Dataset.to_dataframe()
+
+    def load_dataset(self, id, params={}, verify=True):
         if verify == False:
             from requests.packages.urllib3.exceptions import InsecureRequestWarning
             requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
         else:
             requests.packages.urllib3.warnings.resetwarnings()
 
-        request_url = '{0}/{1}'.format(self.api_url, id)
-        response = self.session.get(request_url, params=params, verify=verify)
+        self.url = '{0}/{1}'.format(self.api_url, id)
+        self.params = params
+
+        response = self.session.get(self.url, params=self.params, verify=verify)
         response.raise_for_status()
-        return Dataset.create_from_json(response.json())
+        self.Dataset = Dataset.create_from_json(response.json())
+        return self
+
+    def read_json(self, json_or_fname, encoding="utf-8"):
+
+        if isinstance(json_or_fname, (dict, list)):
+            pass
+        else:
+            import json
+            if os.path.isfile(json_or_fname):
+                with open(json_or_fname, 'r', encoding=encoding) as f:
+                    json_or_fname = json.load(f)
+            else:
+                json_or_fname = json.loads(json_or_fname)
+
+        self.Dataset = Dataset.create_from_json(json_or_fname)
+        return self
+
+    def save_json(self, fname, encoding="utf-8", ensure_ascii=False, indent=4):
+        if self.Dataset is None:
+            raise ValueError("Can't save 'json': Dataset is None!")
+
+        import json
+        with open(fname, 'w', encoding=encoding) as f:
+            json.dump(self.Dataset.json, f, ensure_ascii=ensure_ascii, indent=indent)
+
+        return True
+
+    def to_dataframe(self, **kwargs):
+        if self.Dataset is None:
+            raise ValueError("Can't load DataFrame: Dataset is None!")
+        return self.Dataset.to_dataframe(**kwargs)
