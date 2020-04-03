@@ -34,6 +34,13 @@ class EurostatAPIClient(object):
         self.response_type = response_type
         self.language = language
 
+    def set_proxy(self, proxy_dict):
+        """
+            set proxy for connection (in requests'format) : 
+            ex {'http':'http://my.proxy:8080', 'https':'http://my.proxy:8080'}
+        """
+        self.session.proxies.update(proxy_dict)
+
     @property
     def version(self):
         return self._version
@@ -68,8 +75,14 @@ class EurostatAPIClient(object):
                                         self.response_type,
                                         self.language)
 
-    def get_dataset(self, id, params={}):
+    def get_dataset(self, id, params={}, verify=True):
+        if verify == False:
+            from requests.packages.urllib3.exceptions import InsecureRequestWarning
+            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+        else:
+            requests.packages.urllib3.warnings.resetwarnings()
+
         request_url = '{0}/{1}'.format(self.api_url, id)
-        response = self.session.get(request_url, params=params)
+        response = self.session.get(request_url, params=params, verify=verify)
         response.raise_for_status()
         return Dataset.create_from_json(response.json())
