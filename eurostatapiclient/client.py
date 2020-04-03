@@ -30,7 +30,7 @@ class EurostatAPIClient(object):
     BASE_URL = 'https://ec.europa.eu/eurostat/wdds/rest/data'
     session = requests.Session()
 
-    def __init__(self, version, response_type, language):
+    def __init__(self, version="v2.1", response_type="json", language="en"):
         self.version = version
         self.response_type = response_type
         self.language = language
