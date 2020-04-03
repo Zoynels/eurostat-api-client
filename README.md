@@ -64,6 +64,16 @@ filtered_dataset = client.get_dataset('nrg_bal_c', params=params)
 filtered_dataframe = filtered_dataset.to_dataframe()
 print(filtered_dataframe.head())
 
+
+# Save Dataset to Json-file
+client.save_json("nrg_bal_c.json")
+
+
+# Load dataset from Json-file
+from eurostatapiclient import EurostatAPIClient
+client = EurostatAPIClient()
+filtered_dataset = client.read_json("nrg_bal_c.json")
+print(filtered_dataframe.head())
 ```
 
 ## Contributions
